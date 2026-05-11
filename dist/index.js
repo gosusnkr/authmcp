@@ -219,8 +219,7 @@ async function handleTool(name, args) {
         if (!account)
             return "No TOTP accounts configured.";
         try {
-            const code = await (0, otplib_1.generate)({ secret: account.secret });
-            return `TOTP code for [${account.label}]: ${code}`;
+            const code = (0, otplib_1.generateSync)({ secret: account.secret });
         }
         catch (err) {
             return `Failed to generate TOTP code: ${String(err)}. Ensure the secret is a valid Base32 string.`;
@@ -231,7 +230,7 @@ async function handleTool(name, args) {
         if (!account)
             return "No TOTP accounts configured.";
         try {
-            const code = await (0, otplib_1.generate)({ secret: account.secret });
+            const code = (0, otplib_1.generateSync)({ secret: account.secret });
             const secondsRemaining = 30 - (Math.floor(Date.now() / 1000) % 30);
             return JSON.stringify({
                 account: account.label,
