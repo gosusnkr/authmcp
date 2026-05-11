@@ -5,7 +5,7 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { generate as generateOTP } from "otplib";
+import { generateSync as generateOTP } from "otplib";
 import axios from "axios";
 import * as dotenv from "dotenv";
 
@@ -224,8 +224,7 @@ async function handleTool(
     const account = findAccount(args.account_label as string | undefined);
     if (!account) return "No TOTP accounts configured.";
     try {
-      const code = await generateOTP({ secret: account.secret });
-      return `TOTP code for [${account.label}]: ${code}`;
+      const code = generateOTP({ secret: account.secret });
     } catch (err) {
       return `Failed to generate TOTP code: ${String(err)}. Ensure the secret is a valid Base32 string.`;
     }
@@ -235,7 +234,7 @@ async function handleTool(
     const account = findAccount(args.account_label as string | undefined);
     if (!account) return "No TOTP accounts configured.";
     try {
-      const code = await generateOTP({ secret: account.secret });
+      const code = generateOTP({ secret: account.secret });
       const secondsRemaining = 30 - (Math.floor(Date.now() / 1000) % 30);
       return JSON.stringify(
         {
