@@ -39,7 +39,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const index_js_1 = require("@modelcontextprotocol/sdk/server/index.js");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
-const otplib_1 = require("otplib");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const speakeasy = require("speakeasy");
 const axios_1 = __importDefault(require("axios"));
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
@@ -215,11 +216,17 @@ async function handleTool(name, args) {
             .join("\n")}`;
     }
     if (name === "get_totp_code") {
+        const accounts = getTotpAccounts();
+        console.error(`[DEBUG] Accounts found: ${accounts.length}`);
+        console.error(`[DEBUG] TOTP_SECRET_1 env: ${process.env.TOTP_SECRET_1?.substring(0, 20)}...`);
         const account = findAccount(args.account_label);
         if (!account)
             return "No TOTP accounts configured.";
         try {
-            const code = (0, otplib_1.generateSync)({ secret: account.secret });
+            console.error(`[DEBUG] Using account: ${account.label}, secret: ${account.secret.substring(0, 20)}...`);
+            const code = speakeasy.totp({ secret: account.secret, encoding: "base32" });
+            console.error(`[DEBUG] Generated code: ${code}`);
+            return `Code: ${code} | Account: ${account.label} | Secret: ${account.secret.substring(0, 20)}...`;
         }
         catch (err) {
             return `Failed to generate TOTP code: ${String(err)}. Ensure the secret is a valid Base32 string.`;
@@ -230,7 +237,7 @@ async function handleTool(name, args) {
         if (!account)
             return "No TOTP accounts configured.";
         try {
-            const code = (0, otplib_1.generateSync)({ secret: account.secret });
+            const code = speakeasy.totp({ secret: account.secret, encoding: "base32" });
             const secondsRemaining = 30 - (Math.floor(Date.now() / 1000) % 30);
             return JSON.stringify({
                 account: account.label,

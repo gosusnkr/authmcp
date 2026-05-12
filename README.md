@@ -1,4 +1,4 @@
-# authmcp
+# MCP Microsoft Auth Server
 
 An MCP (Model Context Protocol) server that gives Claude the ability to:
 - Generate **TOTP/OTP codes** (like Microsoft Authenticator) for 2FA automation

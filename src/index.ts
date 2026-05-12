@@ -5,7 +5,8 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { generateSync as generateOTP } from "otplib";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const speakeasy = require("speakeasy");
 import axios from "axios";
 import * as dotenv from "dotenv";
 
@@ -221,10 +222,16 @@ async function handleTool(
   }
 
   if (name === "get_totp_code") {
+    const accounts = getTotpAccounts();
+    console.error(`[DEBUG] Accounts found: ${accounts.length}`);
+    console.error(`[DEBUG] TOTP_SECRET_1 env: ${process.env.TOTP_SECRET_1?.substring(0, 20)}...`);
     const account = findAccount(args.account_label as string | undefined);
     if (!account) return "No TOTP accounts configured.";
     try {
-      const code = generateOTP({ secret: account.secret });
+      console.error(`[DEBUG] Using account: ${account.label}, secret: ${account.secret.substring(0, 20)}...`);
+      const code = speakeasy.totp({ secret: account.secret, encoding: "base32" });
+      console.error(`[DEBUG] Generated code: ${code}`);
+      return `Code: ${code} | Account: ${account.label} | Secret: ${account.secret.substring(0, 20)}...`;
     } catch (err) {
       return `Failed to generate TOTP code: ${String(err)}. Ensure the secret is a valid Base32 string.`;
     }
@@ -234,7 +241,7 @@ async function handleTool(
     const account = findAccount(args.account_label as string | undefined);
     if (!account) return "No TOTP accounts configured.";
     try {
-      const code = generateOTP({ secret: account.secret });
+      const code = speakeasy.totp({ secret: account.secret, encoding: "base32" });
       const secondsRemaining = 30 - (Math.floor(Date.now() / 1000) % 30);
       return JSON.stringify(
         {
