@@ -32,16 +32,12 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const index_js_1 = require("@modelcontextprotocol/sdk/server/index.js");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const speakeasy = require("speakeasy");
-const axios_1 = __importDefault(require("axios"));
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
 function getTotpAccounts() {
@@ -56,13 +52,6 @@ function getTotpAccounts() {
     }
     return accounts;
 }
-const TENANT_ID = process.env.MICROSOFT_TENANT_ID ?? "common";
-const CLIENT_ID = process.env.MICROSOFT_CLIENT_ID ?? "";
-const CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET ?? "";
-const REDIRECT_URI = process.env.MICROSOFT_REDIRECT_URI ?? "http://localhost:3000/auth/callback";
-const SCOPES = (process.env.MICROSOFT_SCOPES ??
-    "openid profile email offline_access User.Read").split(" ");
-const DEFAULT_AUTHORITY = `https://login.microsoftonline.com/${TENANT_ID}`;
 // ─── Tool definitions ──────────────────────────────────────────────────────────
 const tools = [
     {
@@ -101,101 +90,8 @@ const tools = [
             required: [],
         },
     },
-    {
-        name: "get_microsoft_auth_url",
-        description: "Generate a Microsoft OAuth authorization URL. " +
-            "Open this URL in the browser to start the login flow. " +
-            "After login, Microsoft redirects to redirect_uri with a 'code' query parameter.",
-        inputSchema: {
-            type: "object",
-            properties: {
-                state: {
-                    type: "string",
-                    description: "Optional random state string for CSRF protection. Auto-generated if omitted.",
-                },
-                extra_scopes: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Extra scopes beyond the defaults (e.g. ['Mail.Read', 'Calendars.Read']).",
-                },
-                prompt: {
-                    type: "string",
-                    enum: ["login", "consent", "select_account", "none"],
-                    description: "Prompt behavior. Use 'select_account' to always show account picker.",
-                },
-                account_type: {
-                    type: "string",
-                    enum: ["personal", "work_school", "both"],
-                    description: "'personal' uses /consumers, 'work_school' uses /organizations, 'both' uses /common (default).",
-                },
-            },
-            required: [],
-        },
-    },
-    {
-        name: "exchange_code_for_token",
-        description: "Exchange the authorization code (from the redirect URL after login) for access and refresh tokens.",
-        inputSchema: {
-            type: "object",
-            properties: {
-                code: {
-                    type: "string",
-                    description: "The 'code' query parameter from the Microsoft redirect URL after login.",
-                },
-                account_type: {
-                    type: "string",
-                    enum: ["personal", "work_school", "both"],
-                    description: "Must match the account_type used in get_microsoft_auth_url.",
-                },
-            },
-            required: ["code"],
-        },
-    },
-    {
-        name: "refresh_access_token",
-        description: "Use a refresh token to get a new access token without requiring the user to log in again.",
-        inputSchema: {
-            type: "object",
-            properties: {
-                refresh_token: {
-                    type: "string",
-                    description: "The refresh_token from a previous exchange_code_for_token or refresh call.",
-                },
-                account_type: {
-                    type: "string",
-                    enum: ["personal", "work_school", "both"],
-                    description: "Must match the original account type.",
-                },
-            },
-            required: ["refresh_token"],
-        },
-    },
-    {
-        name: "get_microsoft_user_info",
-        description: "Fetch the signed-in user's profile from Microsoft Graph API using an access token.",
-        inputSchema: {
-            type: "object",
-            properties: {
-                access_token: {
-                    type: "string",
-                    description: "A valid Microsoft access token with at least User.Read scope.",
-                },
-            },
-            required: ["access_token"],
-        },
-    },
 ];
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-function getAuthority(accountType) {
-    switch (accountType) {
-        case "personal":
-            return "https://login.microsoftonline.com/consumers";
-        case "work_school":
-            return "https://login.microsoftonline.com/organizations";
-        default:
-            return DEFAULT_AUTHORITY;
-    }
-}
 function findAccount(label) {
     const accounts = getTotpAccounts();
     if (!accounts.length)
@@ -216,17 +112,12 @@ async function handleTool(name, args) {
             .join("\n")}`;
     }
     if (name === "get_totp_code") {
-        const accounts = getTotpAccounts();
-        console.error(`[DEBUG] Accounts found: ${accounts.length}`);
-        console.error(`[DEBUG] TOTP_SECRET_1 env: ${process.env.TOTP_SECRET_1?.substring(0, 20)}...`);
         const account = findAccount(args.account_label);
         if (!account)
             return "No TOTP accounts configured.";
         try {
-            console.error(`[DEBUG] Using account: ${account.label}, secret: ${account.secret.substring(0, 20)}...`);
             const code = speakeasy.totp({ secret: account.secret, encoding: "base32" });
-            console.error(`[DEBUG] Generated code: ${code}`);
-            return `Code: ${code} | Account: ${account.label} | Secret: ${account.secret.substring(0, 20)}...`;
+            return code;
         }
         catch (err) {
             return `Failed to generate TOTP code: ${String(err)}. Ensure the secret is a valid Base32 string.`;
@@ -252,91 +143,10 @@ async function handleTool(name, args) {
             return `Failed to generate TOTP code: ${String(err)}`;
         }
     }
-    if (name === "get_microsoft_auth_url") {
-        if (!CLIENT_ID)
-            return "MICROSOFT_CLIENT_ID is not set in .env";
-        const authority = getAuthority(args.account_type);
-        const state = args.state ?? Math.random().toString(36).substring(2);
-        const allScopes = [...SCOPES, ...(args.extra_scopes ?? [])];
-        const params = new URLSearchParams({
-            client_id: CLIENT_ID,
-            response_type: "code",
-            redirect_uri: REDIRECT_URI,
-            scope: allScopes.join(" "),
-            state,
-            ...(args.prompt ? { prompt: args.prompt } : {}),
-        });
-        const url = `${authority}/oauth2/v2.0/authorize?${params.toString()}`;
-        return JSON.stringify({ auth_url: url, state, scopes: allScopes }, null, 2);
-    }
-    if (name === "exchange_code_for_token") {
-        if (!CLIENT_ID || !CLIENT_SECRET)
-            return "MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET must be set in .env";
-        const authority = getAuthority(args.account_type);
-        try {
-            const response = await axios_1.default.post(`${authority}/oauth2/v2.0/token`, new URLSearchParams({
-                client_id: CLIENT_ID,
-                client_secret: CLIENT_SECRET,
-                code: args.code,
-                redirect_uri: REDIRECT_URI,
-                grant_type: "authorization_code",
-                scope: SCOPES.join(" "),
-            }), { headers: { "Content-Type": "application/x-www-form-urlencoded" } });
-            const { access_token, refresh_token, expires_in, token_type, scope } = response.data;
-            return JSON.stringify({
-                access_token,
-                refresh_token,
-                expires_in,
-                token_type,
-                scope,
-                note: "Store refresh_token securely. Use refresh_access_token to renew when access_token expires.",
-            }, null, 2);
-        }
-        catch (err) {
-            const msg = axios_1.default.isAxiosError(err)
-                ? JSON.stringify(err.response?.data)
-                : String(err);
-            return `Token exchange failed: ${msg}`;
-        }
-    }
-    if (name === "refresh_access_token") {
-        if (!CLIENT_ID || !CLIENT_SECRET)
-            return "MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET must be set in .env";
-        const authority = getAuthority(args.account_type);
-        try {
-            const response = await axios_1.default.post(`${authority}/oauth2/v2.0/token`, new URLSearchParams({
-                client_id: CLIENT_ID,
-                client_secret: CLIENT_SECRET,
-                refresh_token: args.refresh_token,
-                grant_type: "refresh_token",
-                scope: SCOPES.join(" "),
-            }), { headers: { "Content-Type": "application/x-www-form-urlencoded" } });
-            const { access_token, refresh_token, expires_in } = response.data;
-            return JSON.stringify({ access_token, refresh_token, expires_in }, null, 2);
-        }
-        catch (err) {
-            const msg = axios_1.default.isAxiosError(err)
-                ? JSON.stringify(err.response?.data)
-                : String(err);
-            return `Token refresh failed: ${msg}`;
-        }
-    }
-    if (name === "get_microsoft_user_info") {
-        try {
-            const response = await axios_1.default.get("https://graph.microsoft.com/v1.0/me", { headers: { Authorization: `Bearer ${args.access_token}` } });
-            return JSON.stringify(response.data, null, 2);
-        }
-        catch (err) {
-            const msg = axios_1.default.isAxiosError(err)
-                ? JSON.stringify(err.response?.data)
-                : String(err);
-            return `Graph API call failed: ${msg}`;
-        }
-    }
     return `Unknown tool: ${name}`;
 }
 // ─── Server setup ──────────────────────────────────────────────────────────────
-const server = new index_js_1.Server({ name: "mcp-microsoft-auth", version: "1.0.0" }, { capabilities: { tools: {} } });
+const server = new index_js_1.Server({ name: "mcp-totp-auth", version: "1.0.0" }, { capabilities: { tools: {} } });
 server.setRequestHandler(types_js_1.ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
@@ -346,7 +156,7 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
 async function main() {
     const transport = new stdio_js_1.StdioServerTransport();
     await server.connect(transport);
-    console.error("✅ MCP Microsoft Auth server running on stdio");
+    console.error("✅ MCP TOTP Auth server running on stdio");
 }
 main().catch((err) => {
     console.error("Fatal error:", err);

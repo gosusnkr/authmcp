@@ -1,7 +1,7 @@
 {
-  "name": "mcp-microsoft-auth",
+  "name": "mcp-totp-auth",
   "version": "1.0.0",
-  "description": "MCP server for Microsoft TOTP/OTP codes and OAuth authentication",
+  "description": "MCP server for generating TOTP/OTP codes (compatible with Google Authenticator, Raivo, etc.)",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -10,18 +10,18 @@
   },
   "keywords": [
     "mcp",
-    "microsoft",
     "totp",
-    "oauth",
-    "authenticator"
+    "otp",
+    "2fa",
+    "authenticator",
+    "google-authenticator",
+    "raivo"
   ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "axios": "^1.6.0",
     "dotenv": "^16.4.0",
-    "otplib": "^12.0.1",
     "speakeasy": "^2.0.0"
   },
   "devDependencies": {
