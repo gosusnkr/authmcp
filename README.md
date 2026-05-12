@@ -37,6 +37,12 @@ npm install
 3. Tap "Edit"
 4. Copy the Base32 seed/secret
 
+#### While scanning a QR code during 2FA setup:
+1. When you see the QR code on the login page
+2. Look for **"Can't scan the QR code?"** or **"Enter a setup key instead"** link below it
+3. Tap it → you'll see the Base32 secret displayed
+4. Copy the secret and add it to `.env`
+
 #### From other authenticators:
 - Look for "Export", "Show secret", or "Can't scan QR code?" options
 - The secret should be a 16-32 character Base32 string (A-Z, 2-7 only)
