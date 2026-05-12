@@ -24,6 +24,12 @@ npm install
 
 ### 2. Get your TOTP secret
 
+#### While scanning a QR code during 2FA setup:
+1. When you see the QR code on the login page
+2. Look for **"Can't scan the QR code?"** or **"Enter a setup key instead"** link below it
+3. Tap it → you'll see the Base32 secret displayed
+4. Copy the secret and add it to `.env`
+
 #### From Google Authenticator:
 1. Open Google Authenticator
 2. Tap the account you want to export
@@ -69,7 +75,9 @@ npm run build
 
 ## Register with Claude
 
-Add to your MCP config (e.g. `~/.claude/.mcp.json` for Claude Code):
+### Claude Code
+
+Add to your MCP config at `~/claude/.mcp.json`:
 
 ```json
 {
@@ -86,7 +94,36 @@ Add to your MCP config (e.g. `~/.claude/.mcp.json` for Claude Code):
 }
 ```
 
-> **Tip:** You can put secrets in `.env` instead if you prefer — `dotenv` loads it automatically.
+### Claude Desktop
+
+Add to your config at `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
+
+```json
+{
+  "mcpServers": {
+    "totp-auth": {
+      "command": "node",
+      "args": ["C:\\absolute\\path\\to\\dist\\index.js"],
+      "env": {
+        "TOTP_SECRET_1": "YOUR_BASE32_SECRET",
+        "TOTP_LABEL_1": "email@example.com"
+      }
+    }
+  }
+}
+```
+
+**Steps:**
+1. Locate the config file path above for your OS
+2. Open `claude_desktop_config.json` in a text editor
+3. Add the `totp-auth` server block under `mcpServers`
+4. Replace `/absolute/path/to/` with the actual path to this repo's `dist/` folder
+5. Replace `YOUR_BASE32_SECRET` with your actual TOTP secret
+6. Save the file
+7. Restart Claude Desktop
+8. The `get_totp_code` tool will now be available
+
+> **Tip:** You can put secrets in `.env` instead and only set the command/args in the config — `dotenv` loads it automatically.
 
 ---
 
