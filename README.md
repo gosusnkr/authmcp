@@ -77,7 +77,7 @@ npm run build
 
 ### Claude Code
 
-Add to your MCP config at `~/.claude/.mcp.json`:
+Add to your MCP config at `~/claude/.mcp.json`:
 
 ```json
 {
