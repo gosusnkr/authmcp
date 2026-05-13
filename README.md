@@ -1,6 +1,6 @@
 # MCP TOTP Auth Server
 
-An MCP (Model Context Protocol) server that generates **TOTP/OTP codes** for 2FA automation. Works with any authenticator app that supports Base32 secret export: Google Authenticator, Raivo, Authy, Microsoft Authenticator, etc.
+An MCP (Model Context Protocol) server that generates **TOTP/OTP codes** for 2FA automation. Works with any authenticator app that supports Base32 secret export: Google Authenticator, Raivo, Authy, etc.
 
 ---
 
@@ -77,14 +77,14 @@ npm run build
 
 ### Claude Code
 
-Add to your MCP config at `~/claude/.mcp.json`:
+Add to your MCP config at `~\claude\.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "totp-auth": {
       "command": "node",
-      "args": ["/absolute/path/to/dist/index.js"],
+      "args": ["C:\\absolute\\path\\to\\dist\\index.js"],
       "env": {
         "TOTP_SECRET_1": "YOUR_BASE32_SECRET",
         "TOTP_LABEL_1": "email@example.com"
